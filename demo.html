@@ -7,8 +7,62 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-
+    <div id="wae-slider-demo" class="wae-slider fullscreen">
+      <div class="items">
+        <div class="item active" style="background-image:url(images/slide1.jpg)">
+            <div class="item-bg" style="background-image:url()"></div>
+            <div class="item-content content-center">
+              <div class="animate">
+              <h2>We'll Help Manage Your Business</h2>
+              <p>Curiousity is the greatest quality human ever has</p>
+              <a class="wae-button" href="http://google.com">See More</a>
+              <a class="wae-button" href="http://google.com">See More</a>
+              </div>
+            </div>
+        </div>
+        <div class="item" style="background-color:yellow">
+            <div class="item-bg" style="background-image:url()"></div>
+            <div class="item-content content-left">
+              <div class="animate per-element">
+                <h2 data-animation="move-up">Your Second Title - Place it here!</h2>
+                <p data-animation="move-up">Lorem ipsum dolor sit amet</p>
+                <a data-animation="move-up" class="wae-button" href="http://google.com">See More</a>
+                </div>
+            </div>
+        </div>
+        <div class="item" style="background-color:green">
+            <div class="item-bg" style="background-image:url()"></div>
+            <div class="item-content content-right">
+                <div class="animate" data-animation="move-up">
+                  <h2>Your Second Title - Place it here!</h2>
+                  <p>Lorem ipsum dolor sit amet</p>
+                  <a class="wae-button" href="http://google.com">See More</a>
+                </div>
+            </div>
+        </div>
+      </div>
+      <a class="left-control slider-nav" href="#wae-slider-demo">
+        <span class="icon-arrow-left"></span>
+      </a>
+      <a class="right-control slider-nav" href="#wae-slider-demo">
+        <span class="icon-arrow-right"></span>
+      </a>
+      <ol class="wae-slider-indicators">
+        <li class="active"></li>
+        <li></li>
+        <li></li>
+      </ol>
+    </div>
     <script src="jquery-1.11.1.min.js"></script>
     <script src="wae-slider.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function(){
+            $('.wae-slider').waeslider({
+                effect : 'crossfading',
+                pauseOnHover : false
+                // effect : 'slide'
+            });
+        });
+    </script>
   </body>
 </html>
