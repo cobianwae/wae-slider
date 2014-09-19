@@ -2,99 +2,97 @@
 	$.fn.waeslider = function( options ){
 		var settings = $.extend({}, $.fn.waeslider.defaults, options);
 
+
 		return this.each(function(){
-			var $this = $(this);
-			var $leftControl  = $this.find('.left-control');
-			var $rightControl = $this.find('.right-control');
-			
-			$rightControl.click(function(e){
-				e.preventDefault();
-				nextSlide();
-			});
-			
-			$leftControl.click(function(e){
-				e.preventDefault();
-				prevSlide();
-			});
+			var $slide = $(this);
+			var onAnimation = false;
 
-			$this.find('.wae-slider-indicators li').click(function(){
-				var $indicator = $(this);
-				var $activeIndicator = $indicator.parent().find('.active');
-				var currentPos = $('li').index($indicator);
-				var activePos = $('li').index($activeIndicator);
-				console.log(currentPos);
-				console.log(activePos);
-				//next slide
-				if( currentPos > activePos ){
-					switch( settings.effect ){
-						case 'crossfading':
-							crossNext( $this, currentPos + 1 );
-							break;
-						default:
-							slideLeft( $this, currentPos + 1);
-							break;
-					}
-					nextIndicator( $this, currentPos + 1 );
-				}else{
-					switch( settings.effect ){
-						case 'crossfading':
-							crossPrev( $this, currentPos + 1 );
-							break;
-						default:
-							slideRight( $this, currentPos + 1 );
-							break;
-					}
-					prevIndicator( $this, currentPos + 1 );
-				}
-			});
-
-			//initiate content animation
-			var $toAnimate = $this.find('.item.active .animate');
-			contentAppears( [], $toAnimate );
-
-			var nextSlide = function(){
-				switch( settings.effect ){
-					case 'crossfading':
-						crossNext( $this );
-						break;
-					default:
-						slideLeft( $this );
-						break;
-				}
-				nextIndicator( $this );
-			};
-
-			var prevSlide =  function(){
-				switch( settings.effect ){
-					case 'crossfading':
-						crossPrev( $this );
-						break;
-					default:
-						slideRight( $this );
-						break;
-				}
-				prevIndicator( $this );
+			var cycleSlide = function(){
+				var $active = $slide.find('.item.active');
+				var $moveTo = $active.next('.item');
+				if(!$moveTo.length) $moveTo = $slide.find('.item:first-child');
+				move('forwards', $active, $moveTo, settings);
 			}
+			var timer = setInterval(cycleSlide, settings.pauseTime);
 
-			var timer = setInterval( nextSlide, settings.pauseTime );
+			var move = function(direction, $active, $moveTo, settings){
+				if (onAnimation) return;
+				clearInterval(timer);
+				onAnimation = true;
 
+				moveIndicator( $slide, $('.item').index($moveTo) + 1 );
+
+				//transition before move
+				$active.find('.animate').bind(
+					"animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd",
+					function(){
+						switch ( settings.effect ){
+							case 'crossfading':
+								cross( $active, $moveTo, settings.animeSpeed );
+								break;
+							default :
+								slide( direction, $active, $moveTo, settings.animeSpeed );
+								break;
+						} 
+						$active.find('.animate').unbind("animationend webkitAnimationEnd oAnimationEnd MSAnimationEnd");
+					}
+				);
+				var changeState = function(){
+					onAnimation = false;
+					timer = setInterval(cycleSlide,settings.pauseTime);
+					$active.unbind("transitionend webkitTransitionEnd oTransitionEnd MSTransitionEnd", changeState);
+				}
+				$active.bind("transitionend webkitTransitionEnd oTransitionEnd MSTransitionEnd", changeState);
+				//fire the animation
+				$active.find('.animate').addClass('fadeOut');
+			}
+			
 			if(settings.pauseOnHover){
-				$this.hover(function(){
+				$slide.hover(function(){
 					clearInterval(timer);
 				}, function(){
-					timer = setInterval( nextSlide, settings.pauseTime );
+					timer = setInterval( cycleSlide, settings.pauseTime );
 				});
 			}
-		});
-	}
 
-	function debug( obj ){
-		if ( window.console && window.console.log ){
-			window.console.log( 'object length: ', obj.length );
-			$.each(obj, function( key, element ){
-				console.log( key + ' -- ' + element );
+			$slide.find('.slider-nav, .wae-slider-indicators > li').click(function(e){
+				e.preventDefault();
+				var $triggered = $(this);
+				var direction = 'forwards';
+				var target = 0;
+				var $active;
+				var $moveTo;
+
+				if($triggered.hasClass('active')) return;
+
+				if ( $triggered.hasClass('left-control') ) direction = 'backwards';
+				if ( $triggered.is('li') ){
+					var $activeIndicator = $triggered.parent().find('li.active');
+					if( $('li').index($triggered) < $('li').index($activeIndicator) ){
+						direction = 'backwards';
+					}
+					target = $('li').index($triggered) + 1;
+				}
+				$active = $slide.find('.item.active');
+				if ( target == 0 ){
+					if (direction == 'forwards'){
+						$moveTo = $active.next('.item');
+						if (!$moveTo.length) $moveTo = $slide.find('.item:first-child');
+					}else{
+						$moveTo = $active.prev('.item');
+						if (!$moveTo.length) $moveTo = $slide.find('.item:last-child');
+					}
+				}else{
+					$moveTo = $slide.find('.item:nth-child(' + target + ')');
+				}
+
+				move(direction, $active, $moveTo, settings); 
 			});
-		}
+
+			var $toAnimate = $slide.find('.item.active .animate');
+			contentAppears( [], $toAnimate );
+
+		});
 	}
 
 	$.fn.waeslider.defaults = {
@@ -112,140 +110,48 @@
 		afterLoad: function(){}
 	};
 
-	function slideLeft( $slide, pos ){
-		var $active = $slide.find('.item.active');
-		var $next = typeof pos == 'undefined' ? $active.next('.item') : 
-					$slide.find('.item:nth-child('+pos+')') ;
-		if(!$next.length){
-			$next = $active.parent().children(':first-child');
-		}
-		$next.addClass('next');
-		
-		//before slide
-		$active.find('.animate').addClass('fadeOut');
+	
 
-		setTimeout(function(){
-			$active.addClass('left');
-			$next.addClass('left');
-		},600);
-		setTimeout(function(){
-			$active.removeClass('active left');
-			$next.removeClass('next left');
-			$next.addClass('active');
-
-			//after slide
-			var $lastActive = $active.find('.animate');
-			var $toAnimate = $slide.find('.item.active .animate');
-			contentAppears($lastActive, $toAnimate);
-		},1300)
-	}
-
-	function slideRight( $slide, pos ){
-		var $active = $slide.find('.item.active');
-		var $prev = typeof pos == 'undefined' ? $active.prev('.item') :
-					$slide.find('.item:nth-child('+pos+')') ;
-		if(!$prev.length){
-			$prev = $active.parent().children(':last-child');
-		}
-		$prev.addClass('prev');
-		
-		//before slide
-		$active.find('.animate').addClass('fadeOut');
-
-		setTimeout(function(){
-			$active.addClass('right');
-			$prev.addClass('right');
-		},600);
-		setTimeout(function(){
-			$active.removeClass('active right');
-			$prev.removeClass('prev right');
-			$prev.addClass('active');
-
-			//after slide
-			var $lastActive = $active.find('.animate');
-			var $toAnimate = $slide.find('.item.active .animate');
-			contentAppears($lastActive, $toAnimate);
-		},1300);
-	}
-
-	function crossNext( $slide, pos ){
-		var $active = $slide.find('.item.active');
-		var $next = typeof pos == 'undefined' ? $active.next('.item') : 
-					$slide.find('.item:nth-child('+pos+')') ;
-		console.log($next);
-		if(!$next.length){
-			$next = $active.parent().children(':first-child');
-		}
+	function cross($active, $moveTo, speed){
 		$active.addClass('cross-active');
-		$next.addClass('active cross-next');
-
-		//before slide
-		$active.find('.animate').addClass('fadeOut');
-		
-		setTimeout(function(){
-			$active.addClass('cross');
-		},800);
-		setTimeout(function(){
+		$moveTo.addClass('active cross-next');
+		var crossAnime =function(){
 			$active.removeClass('active cross-active cross');
-			$next.removeClass('cross-next cross');
-
-			//after slide
+			$moveTo.removeClass('cross-next cross');
 			var $lastActive = $active.find('.animate');
-			var $toAnimate = $slide.find('.item.active .animate');
+			var $toAnimate = $active.parent().find('.item.active .animate');
 			contentAppears($lastActive, $toAnimate);
-		},1500)
+			$active.unbind("transitionend webkitTransitionEnd oTransitionEnd MSTransitionEnd", crossAnime);
+		}
+		$active.bind("transitionend webkitTransitionEnd oTransitionEnd MSTransitionEnd", crossAnime);
+		$active.addClass('cross');
 	}
 
-	function crossPrev( $slide, pos ){
-		var $active = $slide.find('.item.active');
-		var $prev = typeof pos == 'undefined' ? $active.prev('.item') :
-					$slide.find('.item:nth-child('+pos+')') ;
-		if(!$prev.length){
-			$prev = $active.parent().children(':last-child');
-		}
-		$active.addClass('cross-active');
-		$prev.addClass('active cross-next');
-		
-		//before slide
-		$active.find('.animate').addClass('fadeOut');
-		setTimeout(function(){
-			$active.addClass('cross');
-		},800);
-		setTimeout(function(){
-			$active.removeClass('active cross-active cross');
-			$prev.removeClass('cross-next cross');
-
-			//after slide
+	function slide(direction, $active, $moveTo, speed){
+		var animeClass = direction == 'forwards' ? 'left' : 'right';
+		var directionClass = direction == 'forwards' ? 'next' : 'prev';
+		$moveTo.addClass(directionClass);
+		var slideAnime = function(){
+			$active.removeClass('active '+ animeClass);
+			$moveTo.removeClass(directionClass + ' ' + animeClass);
+			$moveTo.addClass('active');
 			var $lastActive = $active.find('.animate');
-			var $toAnimate = $slide.find('.item.active .animate');
+			var $toAnimate = $active.parent().find('.item.active .animate');
 			contentAppears($lastActive, $toAnimate);
-		},1500)
+			$active.unbind("transitionend webkitTransitionEnd oTransitionEnd MSTransitionEnd", slideAnime);
+		};
+		$active.bind("transitionend webkitTransitionEnd oTransitionEnd MSTransitionEnd",slideAnime);
+		setTimeout(function(){
+			$active.addClass(animeClass);
+			$moveTo.addClass(animeClass);
+		});
 	}
 
-	function nextIndicator( $slide, pos ){
-		var $indicators = $slide.find('.wae-slider-indicators');
-		if ( !$indicators.length ) return;
-		var $active = $indicators.find('.active');
-		var $next = typeof pos == 'undefined' ? $active.next('li') : 
-					$slide.find('li:nth-child('+pos+')') ;
-		if ( !$next.length ){
-			$next = $indicators.children(':first-child');
-		}
+	function moveIndicator($slide, pos){
+		var $active = $slide.find('li.active');
+		var $next = $slide.find('li:nth-child('+pos+')') ;
 		$active.removeClass('active');
-		$next.addClass('active')
-	}
-
-	function prevIndicator( $slide, pos ){
-		var $indicators = $slide.find('.wae-slider-indicators');
-		if ( !$indicators.length ) return;
-		var $active = $indicators.find('.active');
-		var $prev = typeof pos == 'undefined' ? $active.prev('li') :
-					$slide.find('li:nth-child('+pos+')') ;
-		if ( !$prev.length ){
-			$prev = $indicators.children(':last-child');
-		}
-		$active.removeClass('active');
-		$prev.addClass('active');
+		$next.addClass('active');
 	}
 
 	function contentAppears( $lastActive, $toAnimate ){
